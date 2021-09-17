@@ -38,21 +38,27 @@ def receive(bus, ctr):
         if rx_msg is None:
             continue
         rightid = rx_msg.arbitration_id - leftid
-        # if
+        # nextCLV收集完毕
         if ctr % K == K - 1:
             nextCLVMAC = computerMAC.computerMAC(''.join([bin((nextCLV)).replace('0b','')]), groupAuthKey)
+            # 验证nextCLVMAC
             if nextCLVMAC != rightid:
                 continue
+            # 已保存的哈希值
             RHV = nextCLV
             nextCLV = 0
         else:
+            # 验证哈希值知否正确
             if (vertifyHC.vertify(rightid, RHV) == False):
                 continue
+            # 保存正确的哈希值
             RHV = rightid
+        # 加密
         Enctext = encryption.aesEncrypt(groupEnKey, str(ctr))
         data_temp = int.from_bytes(rx_msg.data, byteorder='big', signed=False)
         Enctext = Enctext >> ((16 - rx_msg.dlc) * 8)
         Enctext = Enctext ^ data_temp
+        # 取下一个哈希链最后一个哈希值的位
         last_bit = Enctext % 2
         print(last_bit)
         plaintext = Enctext - last_bit
