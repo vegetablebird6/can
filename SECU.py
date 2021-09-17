@@ -17,6 +17,7 @@ idseed = '110111111011111'
 def simple_periodic_send(bus, ctr):
     oldseed = 22022
     newseed = 35617
+    # 利用新seed生成新的哈希链
     newlist = generateHC(''.join([bin((newseed)).replace('0b','')]), K)
     # next chain last value
     nextCLV = newlist.pop()
@@ -24,12 +25,10 @@ def simple_periodic_send(bus, ctr):
 
     # id 部分处理
     left_idlist = generateID(idseed, groupAuthKey)
-
+    # 利用旧seed生成哈希链
     list = generateHC(''.join([bin((oldseed)).replace('0b','')]), K)
-    print(list.pop())
-    # 数据部分处理
-    # 1. 得到下一个哈希种子值的最后一位
-    # 2. 加密数据域
+    # 因为哈希链的最后一个哈希已经在接收者保存了，所以去掉
+    list.pop()
     print("Starting to send messages")
     with open("Dataset.txt", "r") as file:
         while True:
@@ -50,23 +49,31 @@ def simple_periodic_send(bus, ctr):
                 # nextCLV's MAC
                 nextCLVMAC = computerMAC.computerMAC(''.join([bin((nextCLV)).replace('0b', '')]), groupAuthKey)
                 id = (left_id << 18) + nextCLVMAC
+                # 新换旧
                 oldseed = newseed
                 list = newlist
+                # 生成新的seed值
                 newseed = generateRS(K)
+                # 生成新的哈希链
                 newlist = generateHC(''.join([bin((newseed)).replace('0b', '')]), K)
+                # 弹出并保存最后一个哈希值
                 nextCLV = newlist.pop()
+                # 取最后一个哈希值的首位
                 lastbit = getbit(nextCLV, K)
             else:
                 right_id = list.pop()
                 id = (left_id << 18) + right_id
                 lastbit = getbit(nextCLV, K - 1 - ctr % K)
             # print(lastbit)
+            # data的最后一个字节往左移1位放下最后一个哈希值的位
             data[dlc-1] = (data[dlc-1] << 1) + lastbit
+            # 加密操作
             Enctext = encryption.aesEncrypt(groupEnKey, str(ctr))
             data_temp = transform.datalist_to_int(data, dlc)
             Enctext = Enctext >> ((16 - dlc) * 8)
             Enctext = Enctext ^ data_temp
             data = transform.int_to_datalist(Enctext, dlc)
+            # 封装成message
             msg.data = data
             msg.arbitration_id = id
             bus.send(msg)
