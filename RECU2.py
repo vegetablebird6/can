@@ -56,7 +56,7 @@ async def receive(bus, ctr):
                 rightid = msg.arbitration_id - leftid
                 # if
                 if count == K - 1:
-                    nextCLVMAC = computerMAC.computerMAC(''.join([bin((nextCLV)).replace('0b','')]), groupAuthKey)
+                    nextCLVMAC = computerMAC.computerMAC(bin(nextCLV)[2:], groupAuthKey)
                     if nextCLVMAC != rightid:
                         continue
                     RHV = nextCLV
