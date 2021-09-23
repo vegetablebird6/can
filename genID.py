@@ -1,25 +1,36 @@
 from Crypto.Hash import CMAC
 from Crypto.Cipher import AES
+import random
 
-def generateID(idseed, groupAuthKey):
-    # roundID = 0
-    cmac = CMAC.new(groupAuthKey,(idseed).encode('utf-8'),ciphermod=AES,mac_len=16)
+from doublelinklist import DLinkList
+
+# i为轮次
+def generateID(idseed,i,num,groupAuthKey):
+    round = 0
+    idlist = DLinkList()
+    origincmac = CMAC.new(groupAuthKey,(idseed+str(i)+str(round)).encode('utf-8'),ciphermod=AES,mac_len=16)
     # Transform c from string to binary
-    binary_cmac = int(cmac.hexdigest(),16)
-    list = []
-    m_bit = 128 - 11
+    cmac = int(origincmac.hexdigest(),16)
+    # 剩下多少位数
+    remainbit = 128
     temple = 0b11111111111
-    flag = False
-    while(m_bit >= 11):
-        b = temple << m_bit
-        temp = (binary_cmac & b) >> m_bit
-        for j in list:
-            if (temp == j):
-                flag = True
-        if not flag :
-            list.append(temp)
-            flag = False
-        m_bit -= 11
-    list.sort()
-    # print(list)
-    return list
+    count = 0
+    while(count < num):
+        if remainbit < 11:
+            round += 1
+            origincmac = CMAC.new(groupAuthKey, (idseed + str(i) + str(round)).encode('utf-8'), ciphermod=AES,
+                                  mac_len=16)
+            tempbit = 11 - remainbit
+            newid = cmac << tempbit
+            cmac = int(origincmac.hexdigest(),16)
+            newid = newid + (cmac & (temple & tempbit))
+            cmac = cmac >> tempbit
+            remainbit = 128 - tempbit
+        else:
+            newid = cmac & temple
+            cmac = cmac >> 11
+            remainbit -= 11
+        if idlist.add(newid) == True:
+            count += 1
+    return idlist
+
