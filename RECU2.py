@@ -5,6 +5,7 @@ import transform
 import computerMAC
 import vertifyHC
 import asyncio
+import keyboard
 
 RECU_ID = 0
 K = 18
@@ -12,7 +13,7 @@ SECU_ID = 1
 groupAuthKey = b'f494409468476910ce95efd1f71c8759'
 groupEnKey = b'f494409468476910ce95efd1f71c8759'
 oseed = 22022
-idseed = '110111111011111'
+idseed = '110111111011111011'
 
 
 
@@ -34,20 +35,19 @@ async def receive(bus, ctr):
     loop = asyncio.get_event_loop()
     notifier = can.Notifier(bus, listeners, loop=loop)
     # some known value
+    count = 0
     RHV = 116701
     last_bit = 1
     # generate the leftid list
-    leftidlist = generateID(idseed, groupAuthKey)
+    leftidlist = generateID(idseed, 0, 25, groupAuthKey)
     # next hash chain's last value
     nextCLV = last_bit
     print("Start receiving messages")
     with open("plaintext.txt", "w") as file:
         while True:
             try:
-                if ctr == 256:
-                    ctr = 0
                 # choose the leftid
-                leftid = leftidlist[RECU_ID] << 18
+                leftid = leftidlist.getitem(RECU_ID) << 18
                 # set the receiver's filter
                 can_filters = [{"can_id": leftid, "can_mask": 0x1ffc0000, "extended": True}]
                 bus.set_filters(can_filters)
@@ -55,7 +55,7 @@ async def receive(bus, ctr):
                 msg = await reader.get_message()
                 rightid = msg.arbitration_id - leftid
                 # if
-                if ctr % K == K - 1:
+                if count == K - 1:
                     nextCLVMAC = computerMAC.computerMAC(''.join([bin((nextCLV)).replace('0b','')]), groupAuthKey)
                     if nextCLVMAC != rightid:
                         continue
@@ -78,10 +78,11 @@ async def receive(bus, ctr):
                 for j in range(msg.dlc):
                     file.write(str(msg.data[j]) + ' ')
                 file.write('\n')
-                ctr += 1
+                ctr = (ctr + 1) % 256
+                count = (count + 1) % K
                 nextCLV = (nextCLV << 1) + last_bit
             except KeyboardInterrupt:
-                pass
+                break
     notifier.stop()
 
 
