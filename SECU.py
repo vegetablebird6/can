@@ -7,26 +7,28 @@ import encryption
 import transform
 import computerMAC
 
-ECU_ID = 0
+SECU_ID = 0
+RECU_ID = 1
 K = 18
 groupAuthKey = b'f494409468476910ce95efd1f71c8759'
 groupEnKey = b'f494409468476910ce95efd1f71c8759'
-idseed = '110111111011111'
+idseed = '110111111011111011'
+
 
 
 def simple_periodic_send(bus, ctr):
     count = 0
     oldseed = 22022
     newseed = 35617
-    newlist = generateHC(''.join([bin((newseed)).replace('0b','')]), K)
+    newlist = generateHC(bin(newseed)[2:], K)
     # next chain last value
     nextCLV = newlist.pop()
     print(nextCLV)
 
     # id 部分处理
-    left_idlist = generateID(idseed, groupAuthKey)
+    left_idlist = generateID(idseed, 0, 25, groupAuthKey)
 
-    list = generateHC(''.join([bin((oldseed)).replace('0b','')]), K)
+    list = generateHC(bin(oldseed)[2:], K)
     print(list.pop())
     # 数据部分处理
     # 1. 得到下一个哈希种子值的最后一位
@@ -43,12 +45,11 @@ def simple_periodic_send(bus, ctr):
                 data.append(int(d))
             dlc = len(data)
             msg = can.Message(dlc=8, is_extended_id=True)
-            left_id = left_idlist[ECU_ID]
-            #if ctr % K == K - 1:
+            left_id = left_idlist.getitem(SECU_ID)
             if count == K - 1:
                 print("computer nextCLV's MAC")
                 # nextCLV's MAC
-                nextCLVMAC = computerMAC.computerMAC(''.join([bin((nextCLV)).replace('0b', '')]), groupAuthKey)
+                nextCLVMAC = computerMAC.computerMAC(bin(nextCLV)[2:], groupAuthKey)
                 id = (left_id << 18) + nextCLVMAC
                 oldseed = newseed
                 list = newlist
@@ -70,15 +71,11 @@ def simple_periodic_send(bus, ctr):
             msg.data = data
             msg.arbitration_id = id
             bus.send(msg)
-            # ctr += 1
-            # if ctr == 256:
-            #     ctr = 0
             ctr = (ctr + 1) % 256
             count = (count + 1) % K
-            print(ctr)
+            # print(ctr)
             time.sleep(0.01)
     print('over')
-
 
 
 def main():
