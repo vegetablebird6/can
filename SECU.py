@@ -54,7 +54,7 @@ def simple_periodic_send(bus, ctr):
                 oldseed = newseed
                 list = newlist
                 newseed = generateRS(K)
-                newlist = generateHC(''.join([bin((newseed)).replace('0b', '')]), K)
+                newlist = generateHCbin(newseed)[2:], K)
                 nextCLV = newlist.pop()
                 lastbit = getbit(nextCLV, K)
             else:
