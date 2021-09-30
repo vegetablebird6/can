@@ -1,3 +1,21 @@
+import time
+import can
+from genID import generateID
+from genHC import generateHC
+from genRS import generateRS, getbit
+import encryption
+import transform
+import computerMAC
+
+SECU_ID = 0
+RECU_ID = 1
+K = 18
+groupAuthKey = b'f494409468476910ce95efd1f71c8759'
+groupEnKey = b'f494409468476910ce95efd1f71c8759'
+idseed = '110111111011111011'
+
+
+
 def simple_periodic_send(bus, ctr):
     count = 0
     oldseed = 22022
@@ -62,3 +80,24 @@ def simple_periodic_send(bus, ctr):
             print(ctr)
             time.sleep(0.01)
     print('over')
+
+
+
+def main():
+    reset_msg = can.Message(
+        arbitration_id=0x00, data=[0, 0, 0, 0, 0, 0, 0, 0], is_extended_id=False
+    )
+    with can.Bus(interface="socketcan", channel='vcan0', bitrate=500000) as bus:
+        bus.send(reset_msg)
+
+        simple_periodic_send(bus, ctr=0)
+
+        bus.send(reset_msg)
+        #
+        # limited_periodic_send(bus)
+
+
+    time.sleep(2)
+
+if __name__ == '__main__':
+    main()
