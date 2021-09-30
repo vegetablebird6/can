@@ -83,7 +83,7 @@ def main():
     reset_msg = can.Message(
         arbitration_id=0x00, data=[0, 0, 0, 0, 0, 0, 0, 0], is_extended_id=False
     )
-    with can.Bus(interface="kvaser", channel=0, bitrate=500000) as bus:
+    with can.Bus(interface="socketcan", channel='vcan0', bitrate=500000) as bus:
         bus.send(reset_msg)
 
         periodic_send(bus, ctr=0)
