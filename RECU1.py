@@ -5,16 +5,13 @@ import transform
 import computerMAC
 import vertifyHC
 import asyncio
-import keyboard
 
-RECU_ID = 0
+RECU_ID = 1
 K = 18
-SECU_ID = 1
+SECU_ID = 2
 groupAuthKey = b'f494409468476910ce95efd1f71c8759'
 groupEnKey = b'f494409468476910ce95efd1f71c8759'
-oseed = 22022
 idseed = '110111111011111011'
-
 
 
 def print_message(msg):
@@ -36,7 +33,7 @@ async def receive(bus, ctr):
     notifier = can.Notifier(bus, listeners, loop=loop)
     # some known value
     count = 0
-    RHV = 116701
+    RHV = 60674
     last_bit = 1
     # generate the leftid list
     leftidlist = generateID(idseed, 0, 25, groupAuthKey)
@@ -62,7 +59,7 @@ async def receive(bus, ctr):
                     RHV = nextCLV
                     nextCLV = 0
                 else:
-                    if (vertifyHC.vertify(rightid, RHV) == False):
+                    if not vertifyHC.vertify(rightid, groupAuthKey, RHV):
                         continue
                     RHV = rightid
                 Enctext = encryption.aesEncrypt(groupEnKey, str(ctr))
