@@ -7,7 +7,7 @@ import encryption
 import transform
 import computerMAC
 
-SECU_ID = 2
+SECU_ID = 0
 
 K = 18
 groupAuthKey = b'f494409468476910ce95efd1f71c8759'
@@ -16,6 +16,7 @@ idseed = '110111111011111011'
 
 
 def periodic_send(bus, ctr):
+    global idseed
     count = 0
     oldseed = 197231
     newseed = 35773
@@ -23,11 +24,10 @@ def periodic_send(bus, ctr):
     # next chain last value
     nextCLV = newlist.pop()
     # print(nextCLV)
-
-    # id 部分处理
     left_idlist = generateID(idseed, 0, 25, groupAuthKey)
 
     list = generateHC(bin(oldseed)[2:], groupAuthKey, K)
+    list.pop()
     # print(list.pop())
     # 数据部分处理
     # 1. 得到下一个哈希种子值的最后一位
@@ -37,16 +37,20 @@ def periodic_send(bus, ctr):
         data = []
         data.append(0)
         data.append(0)
-        newidseed = generateRS(18)
+        idseed = generateRS(18)
+        int_idseed = int(idseed, 2)
         remainbit = 18
         while remainbit > 0:
-            data.append(newidseed & 0xff)
-            newidseed = newidseed >> 8
+            data.append(int_idseed & 0xff)
+            int_idseed = int_idseed >> 8
             remainbit -= 8
+        print(data)
         dlc = len(data)
         msg = can.Message(dlc=dlc, is_extended_id=True)
+        # id 部分处理
         left_id = left_idlist.getitem(SECU_ID)
-        #if ctr % K == K - 1:
+        left_idlist = generateID(idseed, 0, 25, groupAuthKey)
+        print(idseed)
         if count == K - 1:
             print("computer nextCLV's MAC")
             # nextCLV's MAC
@@ -55,7 +59,7 @@ def periodic_send(bus, ctr):
             oldseed = newseed
             list = newlist
             newseed = generateRS(K)
-            newlist = generateHC(bin(newseed)[2:], groupAuthKey, K)
+            newlist = generateHC(newseed, groupAuthKey, K)
             nextCLV = newlist.pop()
             lastbit = getbit(nextCLV, K)
         else:
@@ -74,9 +78,9 @@ def periodic_send(bus, ctr):
         bus.send(msg)
         ctr = (ctr + 1) % 256
         count = (count + 1) % K
+        print(data)
         # print(ctr)
         time.sleep(2)
-    print('over')
 
 
 def main():
