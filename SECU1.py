@@ -23,10 +23,10 @@ mutex = threading.Lock()
 
 
 def periodic_send(bus, ctr):
+    global leftidUpdate
     count = 0
     oldseed = 22022
     newseed = 35617
-    global leftidUpdate
     newlist = generateHC(bin(newseed)[2:], groupAuthKey, K)
     # next chain last value
     nextCLV = newlist.pop()
@@ -65,7 +65,7 @@ def periodic_send(bus, ctr):
                 oldseed = newseed
                 list = newlist
                 newseed = generateRS(K)
-                newlist = generateHC(bin(newseed)[2:], groupAuthKey, K)
+                newlist = generateHC(newseed, groupAuthKey, K)
                 nextCLV = newlist.pop()
                 lastbit = getbit(nextCLV, K)
             else:
@@ -115,8 +115,6 @@ def periodic_receive(bus, ctr):
             if rx_msg is None:
                 continue
 
-            print("1")
-
             rightid = rx_msg.arbitration_id - leftid
             if count == K - 1:
                 nextCLVMAC = computerMAC.computerMAC(bin(nextCLV)[2:], groupAuthKey)
@@ -129,7 +127,6 @@ def periodic_receive(bus, ctr):
                     continue
                 RHV = rightid
 
-            print('2')
 
             Enctext = encryption.aesEncrypt(groupEnKey, str(ctr))
             data_temp = int.from_bytes(rx_msg.data, byteorder='big', signed=False)
@@ -141,7 +138,7 @@ def periodic_receive(bus, ctr):
             rx_msg.data = transform.int_to_datalist(plaintext, rx_msg.dlc)
             rx_msg.data[rx_msg.dlc - 1] = rx_msg.data[rx_msg.dlc - 1] >> 1
             # print(rx_msg.data)
-            idseed = bin(rx_msg.data[2] + (rx_msg.data[3] << 8) + (rx_msg.data[4] << 16))[2:]
+            idseed = bin(rx_msg.data[2] + (rx_msg.data[3] << 8) + (rx_msg.data[4] << 16))[2:].zfill(K)
             leftidlist = generateID(idseed, 0, 25, groupAuthKey)
             with mutex:
                 leftidUpdate = True
@@ -161,6 +158,8 @@ def main():
         receivethread = Thread(target=periodic_receive, args=(bus, 0,))
         receivethread.start()
         periodic_send(bus, ctr=0)
+        while True:
+            pass
         bus.send(reset_msg)
         # limited_periodic_send(bus)
 
