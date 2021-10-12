@@ -95,7 +95,7 @@ async def receive(bus, ctr, rhv, nextclv_bit, idseed):
                 msg.data = transform.int_to_datalist(plaintext, msg.dlc)
                 msg.data[msg.dlc - 1] = (msg.data[msg.dlc - 1] >> 1)
                 if index == 0:
-                    idseed = bin(msg.data[2] + (msg.data[3] << 8) + (msg.data[4] << 16))[2:]
+                    idseed = bin(msg.data[2] + (msg.data[3] << 8) + (msg.data[4] << 16))[2:].zfill(K)
                     print(idseed)
                     leftidupdate = True
                 # print(msg.data)
