@@ -1,10 +1,10 @@
-import genRS
+import random
 
 
 def generatedata():
     list = []
     for i in range(8):
-        list.append(genRS.generateRS(7))
+        list.append(random.getrandbits(7))
     return list
 
 
