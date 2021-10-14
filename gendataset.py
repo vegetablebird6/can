@@ -3,8 +3,9 @@ import random
 
 def generatedata():
     list = []
-    for i in range(8):
-        list.append(random.getrandbits(7))
+    num = random.randint(1, 7)
+    for i in range(num):
+        list.append(random.getrandbits(8))
     return list
 
 
