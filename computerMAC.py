@@ -5,7 +5,7 @@ def computerMAC(msg, groupAuthKey):
     bytemsg = msg.encode('utf-8')
     cmac = CMAC.new(groupAuthKey, bytemsg, ciphermod=AES, mac_len=16)
     dig = cmac.hexdigest()
-    length = 110
+    length = 102
     res = int(cmac.hexdigest(), 16) >> length
     # print(res)
     return res
