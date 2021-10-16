@@ -71,12 +71,11 @@ async def receive(bus, ctr, rhv, nextclv_bit, id_seed):
                 right_id = msg.arbitration_id & 0x0003ffff
                 dlc = msg.dlc
                 data_temp = int.from_bytes(msg.data, byteorder='big', signed=False)
-                data = transform.int_to_datalist(data_temp, dlc)
-                m0 = (right_id << 8) + data[dlc - 1] ^ 0x00
-                m1 = (right_id << 8) + data[dlc - 1] ^ 0xff
-                data = data[:dlc - 1]
+                m = (data_temp % 256)
+                m0 = (right_id << 8) + m ^ 0x00
+                m1 = (right_id << 8) + m ^ 0xff
+                data_temp = data_temp // 256
                 dlc = dlc - 1
-                data_temp = transform.datalist_to_int(data, dlc)
                 for i in range(num):
                     if left_id == fake_id[i]:
                         index = i
@@ -113,7 +112,7 @@ async def receive(bus, ctr, rhv, nextclv_bit, id_seed):
                     fake_id_update = True
                 # print(data)
                 for j in range(dlc):
-                    file.write(str(data[j]) + ' ')
+                    file.write(hex(data[j])[2:].zfill(2))
                 file.write('\n')
                 ctr[index] = (tempctr + 1) % 256
                 count_list[index] = (count + 1) % K
