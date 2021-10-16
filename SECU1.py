@@ -1,3 +1,4 @@
+import random
 import threading
 import time
 from threading import Thread
@@ -25,6 +26,7 @@ mutex = threading.Lock()
 def periodic_send(bus, ctr, oldseed, newseed):
     global fake_id_update
     count = 0
+
     old_hash_chain = generateHC(bin(oldseed)[2:], groupAuthKey, K)
     old_hash_chain.pop()
 
@@ -37,16 +39,16 @@ def periodic_send(bus, ctr, oldseed, newseed):
     # 1. 得到下一个哈希种子值的最后一位
     # 2. 加密数据域
     print("Starting to send messages")
-    with open("Dataset.txt", "r") as file:
+    with open("dataset2.txt", "r") as file:
         while True:
             line = file.readline()
             if not line:
                 break
-            date_line = line.split()
+            length = len(line) - 1
             data = []
-            for d in date_line:
-                data.append(int(d))
-            dlc = len(data)
+            for i in range(length // 2):
+                data.append(int(line[2 * i:2 * (i + 1)], 16))
+            dlc = length // 2
             msg = can.Message(dlc=dlc + 1, is_extended_id=True)
             if fake_id_update:
                 # id 部分处理
@@ -157,6 +159,7 @@ def periodic_receive(bus, ctr):
 def main():
     old_seed = 22022
     new_seed = 35617
+    # next_chain_value_mac = random.getrandbits(K)
     reset_msg = can.Message(
         arbitration_id=0x00, data=[0, 0, 0, 0, 0, 0, 0, 0], is_extended_id=False
     )
