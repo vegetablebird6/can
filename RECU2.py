@@ -107,7 +107,7 @@ async def receive(bus, ctr, rhv, nextclv_bit, id_seed):
                 plaintext = enctext ^ data_temp
                 data = transform.int_to_datalist(plaintext, dlc)
                 if index == 0:
-                    id_seed = bin(data[2] + (data[3] << 8) + (data[4] << 16))[2:].zfill(K)
+                    id_seed = bin(data[2] + (data[3] << 8) + (data[4] << 16) + (data[5] << 24))[2:].zfill(K)
                     print(id_seed)
                     fake_id_update = True
                 # print(data)
@@ -124,7 +124,7 @@ async def receive(bus, ctr, rhv, nextclv_bit, id_seed):
 
 if __name__ == "__main__":
     CTR = [0, 0]
-    RHV = [233431, 9431269]
+    RHV = [19964025, 9431269]
     nextCLV_bit = [0, 1]
     with can.Bus(interface="socketcan", channel='vcan0', bitrate=500000) as BUS:
         asyncio.run(receive(BUS, CTR, RHV, nextCLV_bit, id_seed='110111111011111011'))
