@@ -96,61 +96,68 @@ def periodic_send(bus, ctr, oldseed, newseed):
     print('over')
 
 
-def periodic_receive(bus, ctr):
+def periodic_receive(bus, ctr, receive_hash_value, nextclv_bit):
     """The loop for receiving."""
     # some known value
     count = 0
-    receive_hash_value = 233431
-    last_bit = 0
     global fake_id_update
     # generate the left_id list
     global id_seed
     fake_id_list = generateID(id_seed, 0, 25, groupAuthKey)
-    # next hash chain's last value
-    next_chain_value = last_bit
+    next_chain_value = nextclv_bit
     print("Start receiving messages")
     while True:
         try:
             # choose the left_id
-            left_id = fake_id_list.getitem(RECU_ID) << 18
+            fake_id = fake_id_list.getitem(RECU_ID) << 18
             # set the receiver's filter
-            can_filters = [{"can_id": left_id, "can_mask": 0x1ffc0000, "extended": True}]
+            can_filters = [{"can_id": fake_id, "can_mask": 0x1ffc0000, "extended": True}]
             bus.set_filters(can_filters)
             print(id_seed)
             # receive the message
             rx_msg = bus.recv()
             if rx_msg is None:
                 continue
-
-            right_id = rx_msg.arbitration_id - left_id
+            right_id = rx_msg.arbitration_id & 0x0003ffff
+            dlc = rx_msg.dlc
+            data_temp = int.from_bytes(rx_msg.data, byteorder='big', signed=False)
+            m = (data_temp % 256)
+            m0 = (right_id << 8) + m ^ 0x00
+            m1 = (right_id << 8) + m ^ 0xff
+            data_temp = data_temp // 256
+            dlc = dlc - 1
             if count == K - 1:
                 next_chain_value_mac = computerMAC.computerMAC(bin(next_chain_value)[2:], groupAuthKey)
-                if next_chain_value_mac != right_id:
+                if next_chain_value_mac == m0:
+                    single_bit = 0
+                elif next_chain_value_mac == m1:
+                    single_bit = 1
+                else:
                     continue
                 receive_hash_value = next_chain_value
                 next_chain_value = 0
             else:
-                if not vertifyHC.vertify(right_id, groupAuthKey, receive_hash_value):
+                if vertifyHC.vertify(m0, groupAuthKey, receive_hash_value):
+                    single_bit = 0
+                    chain_value = m0
+                elif vertifyHC.vertify(m1, groupAuthKey, receive_hash_value):
+                    single_bit = 1
+                    chain_value = m1
+                else:
                     continue
-                receive_hash_value = right_id
-
+                receive_hash_value = chain_value
             enctext = encryption.aesEncrypt(groupEnKey, str(ctr))
-            data_temp = int.from_bytes(rx_msg.data, byteorder='big', signed=False)
-            enctext = enctext >> ((16 - rx_msg.dlc) * 8)
-            enctext = enctext ^ data_temp
-            last_bit = enctext % 2
-            # print(last_bit)
-            plaintext = enctext - last_bit
-            rx_msg.data = transform.int_to_datalist(plaintext, rx_msg.dlc)
-            rx_msg.data[rx_msg.dlc - 1] = rx_msg.data[rx_msg.dlc - 1] >> 1
-            # print(rx_msg.data)
-            id_seed = bin(rx_msg.data[2] + (rx_msg.data[3] << 8) + (rx_msg.data[4] << 16))[2:].zfill(K)
+            enctext = enctext >> ((16 - dlc) * 8)
+            plaintext = enctext ^ data_temp
+            data = transform.int_to_datalist(plaintext, dlc)
+            print(data)
+            id_seed = bin(data[2] + (data[3] << 8) + (data[4] << 16) + (data[5] << 24))[2:].zfill(K)
             fake_id_list = generateID(id_seed, 0, 25, groupAuthKey)
             with mutex:
                 fake_id_update = True
             ctr = (ctr + 1) % 256
             count = (count + 1) % K
-            next_chain_value = (next_chain_value << 1) + last_bit
+            next_chain_value = (next_chain_value << 1) + single_bit
         except KeyboardInterrupt:
             break
     print("Stopped receiving messages")
@@ -165,10 +172,10 @@ def main():
     )
     with can.Bus(interface="socketcan", channel='vcan0', bitrate=500000) as bus:
         bus.send(reset_msg)
-        # receive_thread = Thread(target=periodic_receive, args=(bus, 0,))
-        # receive_thread.start()
+        receive_thread = Thread(target=periodic_receive, args=(bus, 0, 19964025, 0))
+        receive_thread.start()
         periodic_send(bus, 0, old_seed, new_seed)
-        # receive_thread.join()
+        receive_thread.join()
         bus.send(reset_msg)
     time.sleep(1)
 
