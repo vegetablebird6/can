@@ -1,11 +1,8 @@
-from Crypto.Hash import CMAC
-from Crypto.Cipher import AES
+from Crypto.Hash import SHA256
 
 def vertify(HV, groupAuthKey, RHV):
-    # h = SHA384.new(HV.encode('utf-8'))
-    # h = ''.join([hex(int(h.hexdigest(),16) >> (384 - 18)).replace('0x','')])
-    h = CMAC.new(groupAuthKey, HV.to_bytes(26, byteorder='big'), ciphermod=AES, mac_len=16)
-    h = int(h.hexdigest(), 16) >> 102
+    h = SHA256.new(HV.to_bytes(25, byteorder='big') + groupAuthKey)
+    h = int(h.hexdigest(), 16) >> 231
     if h == RHV:
         return True
     return False
